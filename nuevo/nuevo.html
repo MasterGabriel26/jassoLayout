@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            background-color: #1E1E1E;
+        }
+        .toolbar {
+            background-color: #f0f0f0;
+            padding: 10px;
+        }
+        canvas {
+            border: 1px solid black;
+            cursor: crosshair;
+            display: block;
+            
+        }
+        .selected {
+            outline: 2px dashed rgb(0, 221, 255);
+        }
+    </style>
+    <title>Aplicación de Prototipos Simple</title>
+</head>
+<body>
+    <div class="toolbar">
+        <button id="triangle-tool">Triángulo</button>
+        <button id="circle-tool">Círculo</button>
+        <button id="square-tool">Cuadrado</button>
+        <button id="text-tool">Agregar Texto</button>
+        <button id="delete-tool">Borrar</button>
+        <button id="background-toggle">Alternar Fondo</button>
+        <button id="border-toggle">Alternar Borde</button>
+        <label for="colorPicker">Color:</label>
+        <input type="color" id="colorPicker" value="#ff0000">
+    </div>
+    <canvas id="canvas"></canvas>
+
+    <script>
+        let isDrawing = false;
+        let isDragging = false;
+        let startX, startY;
+        let shapes = [];
+        let selectedShape = null;
+        let canvas = document.getElementById('canvas');
+        let context = canvas.getContext('2d');
+        let colorPicker = document.getElementById('colorPicker');
+        let currentColor = colorPicker.value;
+        let isBackgroundOn = true;
+        let isBorderOn = true;
+        let currentShape = 'triangle'; // Forma por defecto al iniciar la aplicación
+
+        canvas.addEventListener('mousedown', handleMouseDown);
+        canvas.addEventListener('mouseup', handleMouseUp);
+        canvas.addEventListener('mousemove', handleMouseMove);
+        canvas.addEventListener('click', handleMouseClick);
+        canvas.addEventListener('touchstart', handleTouchStart);
+        canvas.addEventListener('touchmove', handleTouchMove);
+        canvas.addEventListener('touchend', handleTouchEnd);
+
+        function handleMouseDown(event) {
+            const rect = canvas.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+            startX = x;
+            startY = y;
+            selectedShape = getSelectedShape(x, y);
+            if (!selectedShape) {
+                isDrawing = true;
+                shapes.push({
+                    type: currentShape,
+                    x: x,
+                    y: y,
+                    width: 0,
+                    height: 0,
+                    color: currentColor,
+                    hasBackground: isBackgroundOn,
+                    hasBorder: isBorderOn
+                });
+            } else {
+                isDragging = true;
+            }
+            redrawCanvas();
+        }
+
+        function handleMouseUp() {
+            isDrawing = false;
+            isDragging = false;
+        }
+
+        function handleMouseMove(event) {
+            const rect = canvas.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+            if (isDrawing) {
+                shapes[shapes.length - 1].width = x - shapes[shapes.length - 1].x;
+                shapes[shapes.length - 1].height = y - shapes[shapes.length - 1].y;
+            } else if (isDragging && selectedShape) {
+                const deltaX = x - startX;
+                const deltaY = y - startY;
+                selectedShape.x += deltaX;
+                selectedShape.y += deltaY;
+                startX = x;
+                startY = y;
+            }
+            redrawCanvas();
+        }
+
+        function handleMouseClick(event) {
+            const rect = canvas.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+            selectedShape = getSelectedShape(x, y);
+            redrawCanvas();
+            showShapeOptions();
+        }
+
+        function handleTouchStart(event) {
+            const rect = canvas.getBoundingClientRect();
+            const x = event.touches[0].clientX - rect.left;
+            const y = event.touches[0].clientY - rect.top;
+            startX = x;
+            startY = y;
+            selectedShape = getSelectedShape(x, y);
+            if (!selectedShape) {
+                isDrawing = true;
+                shapes.push({
+                    type: currentShape,
+                    x: x,
+                    y: y,
+                    width: 0,
+                    height: 0,
+                    color: currentColor,
+                    hasBackground: isBackgroundOn,
+                    hasBorder: isBorderOn
+                });
+            } else {
+                isDragging = true;
+            }
+            redrawCanvas();
+        }
+
+        function handleTouchMove(event) {
+            event.preventDefault(); // Prevent scrolling while drawing
+            const rect = canvas.getBoundingClientRect();
+            const x = event.touches[0].clientX - rect.left;
+            const y = event.touches[0].clientY - rect.top;
+            if (isDrawing) {
+                shapes[shapes.length - 1].width = x - shapes[shapes.length - 1].x;
+                shapes[shapes.length - 1].height = y - shapes[shapes.length - 1].y;
+            } else if (isDragging && selectedShape) {
+                const deltaX = x - startX;
+                const deltaY = y - startY;
+                selectedShape.x += deltaX;
+                selectedShape.y += deltaY;
+                startX = x;
+                startY = y;
+            }
+            redrawCanvas();
+        }
+
+        function handleTouchEnd() {
+            isDrawing = false;
+            isDragging = false;
+        }
+
+        function redrawCanvas() {
+            context.clearRect(0, 0, canvas.width, canvas.height);
+            shapes.forEach(shape => {
+                context.fillStyle = shape.color;
+                if (shape.hasBackground) {
+                    if (shape.type === 'triangle') {
+                        // Dibujar un triángulo
+                        context.beginPath();
+                        context.moveTo(shape.x + shape.width / 2, shape.y);
+                        context.lineTo(shape.x, shape.y + shape.height);
+                        context.lineTo(shape.x + shape.width, shape.y + shape.height);
+                        context.closePath();
+                        context.fill();
+                    } else if (shape.type === 'circle') {
+                        // Dibujar un círculo
+                        context.beginPath();
+                        context.arc(shape.x, shape.y, Math.abs(shape.width), 0, 2 * Math.PI);
+                        context.closePath();
+                        context.fill();
+                    } else if (shape.type === 'square' || shape.type === 'rectangle') {
+                        // Dibujar un cuadrado o rectángulo
+                        context.fillRect(shape.x, shape.y, shape.width, shape.height);
+                    } else if (shape.type === 'text') {
+                        // Dibujar texto
+                        context.font = "16px Arial";
+                        context.fillText(shape.text, shape.x, shape.y + 16); // Ajuste para centrar el texto verticalmente
+                        // Dibujar el enfoque del texto
+                        context.strokeStyle = 'blue';
+                        context.lineWidth = 2;
+                        context.strokeRect(shape.x, shape.y, context.measureText(shape.text).width, 16);
+                    }
+                }
+                if (shape.hasBorder) {
+                    context.strokeStyle = 'black';
+                    context.lineWidth = 2;
+                    if (shape.type === 'triangle') {
+                        // Dibujar el borde del triángulo
+                        context.beginPath();
+                        context.moveTo(shape.x + shape.width / 2, shape.y);
+                        context.lineTo(shape.x, shape.y + shape.height);
+                        context.lineTo(shape.x + shape.width, shape.y + shape.height);
+                        context.closePath();
+                        context.stroke();
+                    } else if (shape.type === 'circle') {
+                        // Dibujar el borde del círculo
+                        context.beginPath();
+                        context.arc(shape.x, shape.y, Math.abs(shape.width), 0, 2 * Math.PI);
+                        context.closePath();
+                        context.stroke();
+                    } else if (shape.type === 'square' || shape.type === 'rectangle') {
+                        // Dibujar el borde del cuadrado o rectángulo
+                        context.strokeRect(shape.x, shape.y, shape.width, shape.height);
+                    }
+                }
+                if (selectedShape === shape) {
+                    context.strokeStyle = 'blue';
+                    context.lineWidth = 2;
+                    if (shape.type === 'circle') {
+                        // Dibujar el enfoque del círculo
+                        context.beginPath();
+                        context.arc(shape.x, shape.y, Math.abs(shape.width) + 5, 0, 2 * Math.PI);
+                        context.closePath();
+                        context.stroke();
+                    } else {
+                        // Dibujar el enfoque de otras formas
+                        context.strokeRect(shape.x, shape.y, shape.width, shape.height);
+                    }
+                }
+            });
+        }
+
+        function getSelectedShape(x, y) {
+            for (let i = shapes.length - 1; i >= 0; i--) {
+                const shape = shapes[i];
+                if (x >= shape.x && x <= shape.x + shape.width && y >= shape.y && y <= shape.y + shape.height) {
+                    return shape;
+                }
+            }
+            return null;
+        }
+
+        function showShapeOptions() {
+            // Aquí puedes mostrar botones de opciones específicas para la figura seleccionada
+            // Por ejemplo, cambiar el color, cambiar el tamaño, etc.
+        }
+
+        let triangleTool = document.getElementById('triangle-tool');
+        let circleTool = document.getElementById('circle-tool');
+        let squareTool = document.getElementById('square-tool');
+        let textTool = document.getElementById('text-tool');
+        let deleteTool = document.getElementById('delete-tool');
+        let backgroundToggle = document.getElementById('background-toggle');
+        let borderToggle = document.getElementById('border-toggle');
+
+        triangleTool.addEventListener('click', () => {
+            currentShape = 'triangle';
+        });
+
+        circleTool.addEventListener('click', () => {
+            currentShape = 'circle';
+        });
+
+        squareTool.addEventListener('click', () => {
+            currentShape = 'square';
+        });
+
+        textTool.addEventListener('click', () => {
+            const text = prompt('Ingrese el texto:');
+            if (text !== null) {
+                shapes.push({
+                    type: 'text',
+                    x: 50, // Posición inicial del texto en x
+                    y: 50, // Posición inicial del texto en y
+                    text: text,
+                    color: currentColor,
+                    hasBackground: isBackgroundOn,
+                    hasBorder: isBorderOn
+                });
+                redrawCanvas();
+            }
+        });
+
+        deleteTool.addEventListener('click', () => {
+            if (selectedShape) {
+                const index = shapes.indexOf(selectedShape);
+                shapes.splice(index, 1);
+                selectedShape = null;
+                redrawCanvas();
+                showShapeOptions();
+            }
+        });
+
+        backgroundToggle.addEventListener('click', () => {
+            if (selectedShape) {
+                selectedShape.hasBackground = !selectedShape.hasBackground;
+                redrawCanvas();
+            }
+        });
+
+        borderToggle.addEventListener('click', () => {
+            if (selectedShape) {
+                selectedShape.hasBorder = !selectedShape.hasBorder;
+                redrawCanvas();
+            }
+        });
+
+        colorPicker.addEventListener('change', () => {
+            currentColor = colorPicker.value;
+            if (selectedShape) {
+                selectedShape.color = currentColor;
+                redrawCanvas();
+            }
+        });
+    </script>
+</body>
+</html>
