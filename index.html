@@ -11,17 +11,30 @@
             position: relative;
         }
     </style>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/0.4.1/html2canvas.js"></script>
 </head>
 
-<body>
+<body onload="autoClick()">
     <div class="container">
         <div class="propiedades">
             <input type="number" id="widthInput" min="0" step="1" placeholder="Ancho">
             <input type="number" id="heightInput" min="0" step="1" placeholder="Alto">
             <button id="deleteButton" style="display:none;">Eliminar</button>
-            <button id="increaseZIndexButton" style="display:none;">Mover arriba</button>
-            <button id="decreaseZIndexButton" style="display:none;">Mover abajo</button>
-            <span id="zIndexValue" style="display:none;"></span>        
+            <button id="decreaseZIndexButton" style="display:none;">▼</button>
+            <span id="zIndexValue" style="display:none;"></span>
+            <button id="increaseZIndexButton" style="display:none;">▲</button>
+            <select id="backgroundSelect">
+                <option value="">PLANTILLAS</option>
+                <option value="./img/image (1).jpg">Espacio Cerrado</option>
+                <option value="./img/Vector 39.png">Casa Antigua Jardin</option>
+                <option value="./img/Group 1000006173.png">Salon</option>
+                <option value="./img/Group 1000006174.png">Dormitorios</option>
+            </select>
+            <input type="number" id="rotationInput" min="0" step="1" placeholder="Ángulo">
+            <button id="rotateButton"></button>
+
+            <!-- <a id="download">Download</a> -->
         </div>
         <div class="container-menu">
             <div class="objetos">
@@ -31,6 +44,9 @@
                 <img src="./img/Rectangle 22437.png" alt="" class="obj">
                 <img src="./img/Rectangle 22438.png" alt="" class="obj">
                 <img src="./img/Group 1000006170.png" alt="" class="obj">
+                <img src="./img/Rectangle 22435 (1).png" alt="" class="obj">
+                <img src="./img/Rectangle 22436 (1).png" alt="" class="obj">
+                <img src="./img/Rectangle 22436 (2).png" alt="" class="obj">
             </div>
         </div>
         <div class="container-layout" id="container-layout">
@@ -39,11 +55,67 @@
             </div>
         </div>
     </div>
-
-   
-
 </body>
+<script>
+    var miDiv = document.getElementById("layout");
+    var backgroundSelect = document.getElementById("backgroundSelect");
 
+    backgroundSelect.addEventListener("change", function () {
+        var selectedBackground = backgroundSelect.value;
+        miDiv.style.backgroundImage = "url('" + selectedBackground + "')";
+        miDiv.style.backgroundColor = "#1E1E1E";
+    });
+
+    var rotationInput = document.getElementById("rotationInput");
+    var rotateButton = document.getElementById("rotateButton");
+
+    // Agregar eventos para rotar el objeto desde el botón
+    rotateButton.addEventListener('click', function () {
+        if (selectedObj !== null) {
+            // Obtener el ángulo actual
+            var rotationValue = parseFloat(rotationInput.value) || 0;
+            // Incrementar el ángulo en 20 grados
+            rotationValue += 20;
+            // Limitar el ángulo a 360 grados
+            rotationValue = rotationValue % 360;
+            // Aplicar la rotación al objeto seleccionado
+            selectedObj.style.transform = "rotate(" + rotationValue + "deg)";
+            // Actualizar el valor del input de rotación
+            rotationInput.value = rotationValue;
+        }
+    });
+
+
+
+    // Agregar eventos para rotar el objeto desde el input
+    rotationInput.addEventListener('input', function () {
+        if (selectedObj !== null) {
+            var rotationValue = rotationInput.value || 0;
+            selectedObj.style.transform = "rotate(" + rotationValue + "deg)";
+        }
+    });
+
+</script>
+<script type="text/javascript">
+    function autoClick() {
+        $("#download").click();
+    }
+
+    $(document).ready(function () {
+        var element = $("#layout");
+
+        $("#download").on('click', function () {
+            html2canvas(element, {
+                onrendered: function (canvas) {
+                    var imageData = canvas.toDataURL("image/jpg");
+                    var newData = imageData.replace(/^data:image\/jpg/, "data:application/octet-stream");
+                    $("#download").attr("download", "image.jpg").attr("href", newData);
+                }
+            });
+
+        });
+    });
+</script>
 <script>
     var layout = document.getElementById("layout");
     var obj = document.getElementsByClassName("obj");
@@ -150,7 +222,14 @@
         widthInput.value = width;
         heightInput.value = height;
 
-        // Mostrar los botones de eliminar y mover
+        // Obtener la rotación del objeto seleccionado
+        var transformValue = window.getComputedStyle(selectedObj).getPropertyValue('transform');
+        var matrix = transformValue.match(/^matrix\((.+)\)$/);
+        var rotation = matrix ? parseFloat(matrix[1].split(', ')[0]) : 0;
+        // Asignar el valor al input de rotación
+        rotationInput.value = rotation;
+
+        // Mostrar los botones de eliminar, rotar y mover
         deleteButton.style.display = 'block';
         increaseZIndexButton.style.display = 'block';
         decreaseZIndexButton.style.display = 'block';
@@ -171,6 +250,7 @@
         // Enfocar los inputs cuando se selecciona un objeto
         widthInput.focus();
     }
+
 
     deleteButton.onclick = function () {
         if (selectedObj !== null) {
